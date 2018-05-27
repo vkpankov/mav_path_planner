@@ -5,7 +5,7 @@ https://github.com/introlab/rtabmap
 https://github.com/introlab/rtabmap_ros (взаимодействие RTAB-Map с ROS)  
 https://github.com/raulmur/ORB_SLAM2 
 https://github.com/ethz-asl/mav_control_rw/ (контроллер)  
-https://github.com/ethz-asl/ethzasl_msf (объединение сенсоров) 
+https://github.com/ethz-asl/ethzasl_msf (объединение сенсоров)  
 https://github.com/AlessioTonioni/Autonomous-Flight-ROS/ (пакеты action_controller и moveit_simple_controller_manager)  
 https://github.com/ethz-asl/rotors_simulator
   

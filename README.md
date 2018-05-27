@@ -25,5 +25,5 @@ https://github.com/ros-planning/moveit
    git clone https://github.com/vkpankov/mav_path_planner  
 5. Построить проект: catkin build
 
-Видео-демонстрация работы:
+Видео-демонстрация работы (ускоренная):  
 https://youtu.be/5_vqReFoaeU

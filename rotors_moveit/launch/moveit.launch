@@ -1,0 +1,16 @@
+<launch>
+ <node name="action_controller" pkg="action_controller" type="action_controller">
+    <remap from="/command/trajectory" to="/hummingbird/command/trajectory"/>
+ </node>
+
+  <include file="$(find rotors_moveit)/launch/move_group.launch">
+    <arg name="allow_trajectory_execution" value="true"/>
+    <arg name="fake_execution" value="false"/>
+    <arg name="info" value="false"/>
+    <arg name="debug" value="$(arg debug)"/>
+
+  </include> 
+
+  <include file="$(find rotors_moveit)/launch/moveit_rviz.launch"/>
+
+</launch>

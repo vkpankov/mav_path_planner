@@ -1,0 +1,27 @@
+#include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_broadcaster.h>
+
+static tf::TransformBroadcaster br;
+
+tf::Transform transform;
+StampedTransform cur_transform;
+
+tf::Quaternion q;
+ros::Publisher pose_pub;
+
+void pose_callback(const geometry_msgs::PoseStampedPtr &pose) {
+	transform.setOrigin( tf::Vector3(pose->pose.position.x, pose->pose.position.y, pose->pose.position.z) );
+	transform.setRotation(pose.orientation);
+	br.sendTransform(transform);
+	pose_pub.publish(transform);
+}
+
+int main(int argc, char **argv) {
+	ros::init(argc, argv, "pose_transform");
+	ros::NodeHandle nh( ros::this_node::getName() );
+	pose_pub = nh.advertise<geometry_msgs::StampedTransform>("/pose", 1000);
+       	ros::Subscriber pose_sub = n.subscribe("lsd_slam/pose", 1000, pose_callback);
+	ros::spin();
+	return 0;
+    }

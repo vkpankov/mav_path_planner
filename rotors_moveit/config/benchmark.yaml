@@ -1,0 +1,26 @@
+benchmark_config:
+  warehouse:
+      scene_name: myscene3              # REQUIRED
+  parameters:
+      runs: 1          # Default 10
+      group: main                                      # REQUIRED
+      timeout: 20                       # Default 10.0
+      output_directory: /home/vkpankov/final_exps/                    # Default is current working directory
+      start_states: startstate   # Default ""
+      queries: 
+        - querygoal4
+      workspace:  # Optional
+          frame_id: world
+          min_corner:
+              x: 5
+              y: 5
+              z: 0
+          max_corner:
+              x: 20
+              y: 20
+              z: 3
+  planners:
+      - plugin: ompl_interface/OMPLPlanner             # REQUIRED
+        planners:  
+          - PRMstark
+

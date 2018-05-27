@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: rotors_description
+    relative_path: urdf/hummingbird.urdf
+  SRDF:
+    relative_path: config/hummingbird.srdf
+  CONFIG:
+    author_name: vkpankov
+    author_email: vkpankov@gmail.com
+    generated_timestamp: 1525298656

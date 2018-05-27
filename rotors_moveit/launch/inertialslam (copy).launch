@@ -1,0 +1,90 @@
+<launch>  
+
+  <arg name="frame_id"                default="/hummingbird/base_link" />
+  <arg name="rgb_topic"               default="/hummingbird/vi_sensor/camera_depth/camera/image_raw" />
+  <arg name="depth_topic"             default="/hummingbird/vi_sensor/camera_depth/depth/disparity" />
+  <arg name="camera_info_topic"       default="/hummingbird/vi_sensor/camera_depth/camera/camera_info" />
+  <arg name="imu_topic"               default="/hummingbird/vi_sensor/imu" />
+  <arg name="imu_ignore_acc"          default="false" />
+  <arg name="imu_remove_gravitational_acceleration" default="true" />
+
+  <!-- Localization-only mode -->
+  <arg name="localization"      default="false"/>
+  <arg     if="$(arg localization)" name="rtabmap_args"  default=""/>
+  <arg unless="$(arg localization)" name="rtabmap_args"  default="--delete_db_on_start"/>  
+  <group ns="rtabmap">
+    <!-- Visual Odometry -->
+    <node pkg="rtabmap_ros" type="rgbd_odometry" name="visual_odometry" output="screen" args="$(arg rtabmap_args)">
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/vo"/>
+
+      <param name="frame_id"               type="string" value="$(arg frame_id)"/>
+      <param name="publish_tf"             type="bool"   value="false"/>
+      <param name="publish_null_when_lost" type="bool"   value="false"/>
+      <param name="guess_from_tf"          type="bool"   value="true"/>
+
+      <param name="Odom/Strategy"      type="string" value="5"/>
+      <param name="approx_sync"      type="bool" value="false"/>
+      <param name="Odom/GuessMotion"      type="bool" value="false"/>
+      <param name="Odom/ResetCountdown"    type="string" value="1"/>
+      <param name="OdomORBSLAM2/VocPath"        type="string" value="/home/vkpankov/NonRos/ORB_SLAM2/Vocabulary/ORBvoc.txt"/>
+      <param name="Rtabmap/StartNewMapOnLoopClosure" value="true"/>
+    </node>
+
+    <!-- SLAM -->
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="$(arg rtabmap_args)">
+      <param name="frame_id"        type="string" value="$(arg frame_id)"/>
+ 
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/hummingbird/msf_core/odometry"/>
+      
+      <param name="Kp/DetectorStrategy"    type="string" value="6"/>
+      <param name="Kp/MaxDepth"    type="string" value="5"/> 
+      <param name="Kp/MinDepth"    type="string" value="0.05"/> 
+      <param name="Kp/MaxFeatures"    type="string" value="1000"/> 
+      <param name="DbSqlite3/InMemory"    type="bool" value="true"/> 
+
+
+
+      <!-- localization mode -->
+      <param name="Mem/InitWMWithAllNodes" type="string" value="$(arg localization)"/> 
+      <param name="Mem/RehearsalSimilarity" type="string" value="0.4"/> 
+      <param name="Mem/UseOdomFeatures" type="string" value="false"/> 
+      <param name="Mem/STMSize" type="string" value="15"/> 
+      <param name="Mem/RehearsalIdUpdatedToNewOne" type="string" value="true"/> 
+      <param name="Mem/BadSignaturesIgnored" type="string" value="true"/> 
+
+      <param name="Mem/ImageKept" type="string" value="true"/>
+      <param name="Mem/BinDataKept" type="string" value="false"/>
+
+
+      <param name="ImageBufferSize" type="string" value="5"/> 
+      <param name="DetectionRate" type="string" value="2"/> 
+      <param name="RGBD/OptimizeMaxError" type="String" value="0.6"/>
+
+      <param     if="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="false"/>
+      <param unless="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="true"/>
+      
+    </node>
+
+    <!-- Visualisation RTAB-Map !-->
+    <node pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="log">
+      <param name="subscribe_depth" type="bool" value="true"/>
+      <param name="subscribe_laserScan" type="bool" value="false"/>
+      <param name="frame_id" type="string" value="$(arg frame_id)"/>
+      <param name="wait_for_transform" type="bool" value="true"/>
+    
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/hummingbird/msf_core/odometry"/>
+
+    </node> 
+
+  </group>
+
+</launch>

@@ -1,0 +1,205 @@
+#include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseWithCovariance.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/Vector3.h>
+#include <nav_msgs/Odometry.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf/transform_listener.h>
+#include <tf2/convert.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_datatypes.h>
+#include <string.h>
+#include <std_msgs/Float64.h>
+#include <cmath>
+ros::Publisher pose_pub;
+ros::Publisher height_pub;
+ros::Publisher simple_pose_pub;
+ros::Publisher odom_pub;
+tf::TransformListener *pListener;
+geometry_msgs::Pose ideal_pose;
+
+double scale_;
+
+
+  void poseMessageReceived(const std_msgs::Float64ConstPtr& scalePtr) {
+    scale_ =  scalePtr->data;
+    // One flaw to this method is that nothing is making sure that this message and the pose message are synced up.
+    // This shouldn't be a *huge* source of error, but it should be replaced with something better.
+  }
+
+  void pressure_height_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
+	geometry_msgs::PoseWithCovarianceStamped poseWithCov;
+	double val = 0.05;
+	poseWithCov.pose.covariance[0] = val;
+	poseWithCov.pose.covariance[7] = val;
+	poseWithCov.pose.covariance[14] = val;
+	poseWithCov.pose.covariance[21] = val;
+	poseWithCov.pose.covariance[28] = val;
+	poseWithCov.pose.covariance[35] = val;
+	poseWithCov.pose.pose.position.x = 0;
+	poseWithCov.pose.pose.position.y = 0;
+	poseWithCov.pose.pose.position.z = msg->point.z;
+	height_pub.publish(poseWithCov);
+}
+
+
+void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
+	
+	nav_msgs::Odometry odom = *msg;
+        odom.child_frame_id = "base_link";
+	 double _x = odom.pose.pose.position.x;
+	 odom.pose.pose.position.x = -1*odom.pose.pose.position.y;
+	 odom.pose.pose.position.y = _x;
+	
+	
+	tf::Quaternion r, oldRot, newRot;
+	r.setRPY(0.0, 0.0 , 1.57 );
+
+	tf::quaternionMsgToTF(odom.pose.pose.orientation, oldRot);
+	newRot = oldRot*r;
+
+	quaternionTFToMsg(newRot, odom.pose.pose.orientation);
+
+	//odom.pose.pose.orientation = newRot;
+
+	odom_pub.publish(odom);
+
+}
+
+void pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+ try {
+
+	
+
+tf::StampedTransform base_link_to_camera_transform;
+	pListener->lookupTransform ( "base_link", "front_cam_optical_frame", ros::Time ( 0 ), base_link_to_camera_transform );
+	tf::Quaternion rotation =  base_link_to_camera_transform.getRotation();
+	std::cout << rotation.getX() << " " << rotation.getY() << " " << rotation.getZ() << " " << rotation.getW();
+	
+	ROS_INFO( "transform published" );
+
+
+
+	geometry_msgs::PoseWithCovarianceStamped poseWithCov;
+
+	poseWithCov.header = msg->header;
+	poseWithCov.pose.pose = msg->pose;
+	/*poseWithCov.pose.pose.orientation.x = rotation.getX();
+        poseWithCov.pose.pose.orientation.y = rotation.getY();
+        poseWithCov.pose.pose.orientation.z = rotation.getZ();
+        poseWithCov.pose.pose.orientation.w = rotation.getW();
+*/
+
+	double val = 0.05;
+//if(scale_>1)
+//val = 0.005*pow(scale_,2);
+//if(scale_<1&&scale_>0.1)
+//val = 0.005*pow(1/scale_,2);
+	poseWithCov.pose.covariance[0] = val;
+	poseWithCov.pose.covariance[7] = val;
+	poseWithCov.pose.covariance[14] = val;
+	poseWithCov.pose.covariance[21] = val;
+	poseWithCov.pose.covariance[28] = val;
+	poseWithCov.pose.covariance[35] = val;
+
+	pose_pub.publish(poseWithCov);
+	return;
+
+/*
+tf::StampedTransform base_link_to_camera_transform;
+	tf::StampedTransform base_link_to_camera_transform_no_translation;
+
+
+	pListener->lookupTransform ( "base_link", "front_cam_optical_frame", ros::Time ( 0 ), base_link_to_camera_transform );
+	base_link_to_camera_transform_no_translation = base_link_to_camera_transform;
+	base_link_to_camera_transform_no_translation.setOrigin ( tf::Vector3 ( 0.0, 0.0, 0.0 ) );
+
+	tf::Transform lsd_slam_pose_orientation;
+  	lsd_slam_pose_orientation.setOrigin( tf::Vector3(0.0, 0.0, 0.0) );
+  	lsd_slam_pose_orientation.setRotation(tf::Quaternion(msg->pose.orientation.x,msg->pose.orientation.y,msg->pose.orientation.z, msg->pose.orientation.w));
+	
+pListener->lookupTransform ( "base_link", "front_cam_optical_frame", ros::Time ( 0 ), base_link_to_camera_transform );
+	base_link_to_camera_transform_no_translation = base_link_to_camera_transform;
+
+tf::Transform pose_out = lsd_slam_pose_orientation*base_link_to_camera_transform_no_translation.inverse();
+
+	tf::Quaternion pose_orientation = pose_out.getRotation();
+	
+	tf::Quaternion r;
+	r.setRPY(3.1416/2.0, -3.1416/2.0 , 0.0 );
+
+	geometry_msgs::PoseStamped pose_stamped;
+	tf::Quaternion pose_orientation = pose_out.getRotation();
+
+//base_link_to_camera_transform_no_translation.getRotation()*tf::createQuaternionFromRPY(0, 3.14159, 0)*tf::createQuaternionFromRPY(0, 0, -3.14159/2);
+
+        pose_stamped.pose.orientation.x = pose_orientation.getX();
+        pose_stamped.pose.orientation.y = pose_orientation.getY();
+        pose_stamped.pose.orientation.z = pose_orientation.getZ();
+        pose_stamped.pose.orientation.w = pose_orientation.getW();
+        pose_stamped.pose.position.x = msg->pose.position.x;
+        pose_stamped.pose.position.y = msg->pose.position.y;
+	pose_stamped.pose.position.z = msg->pose.position.z;
+	pose_stamped.header = msg->header;	
+
+	poseWithCov.pose.pose.orientation.x = pose_orientation.getX();
+        poseWithCov.pose.pose.orientation.y = pose_orientation.getY();
+        poseWithCov.pose.pose.orientation.z = pose_orientation.getZ();
+        poseWithCov.pose.pose.orientation.w = pose_orientation.getW();
+        poseWithCov.pose.pose.position.x = msg->pose.position.x;
+        poseWithCov.pose.pose.position.y = msg->pose.position.y;
+	poseWithCov.pose.pose.position.z = msg->pose.position.z;
+	poseWithCov.header = msg->header;
+
+	double val = 0.02*pow(scale_,2);
+	poseWithCov.pose.covariance[0] = val;
+	poseWithCov.pose.covariance[7] = val;
+	poseWithCov.pose.covariance[14] = val;
+	poseWithCov.pose.covariance[21] = val;
+	poseWithCov.pose.covariance[28] = val;
+	poseWithCov.pose.covariance[35] = val;
+
+	pose_pub.publish(poseWithCov);
+	pose_stamped.header.frame_id="base_link";
+	simple_pose_pub.publish(pose_stamped);
+*/
+      } catch ( tf::LookupException e ) {
+                    std::cout << e.what() << std::endl;
+      }
+}
+
+int main(int argc, char **argv) {
+
+	std::string input_topic = "/lsd_slam/pose";
+	std::string pressure_height_topic = "/pressure_height";
+	std::string output_topic = "/poseWithCov";
+	ros::init(argc, argv, "pose_transform");
+	pListener = new (tf::TransformListener);
+
+
+	ros::NodeHandle nh( ros::this_node::getName() );
+	pose_pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>(output_topic, 1000);
+	height_pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/height_pose", 1000);
+	odom_pub = nh.advertise<nav_msgs::Odometry>("/rtabmap_odom", 1000);
+
+	ROS_INFO( "Listening for transform on: %s", input_topic.c_str() );
+	ROS_INFO( "Rebroadcasting pose on: %s", output_topic.c_str() );
+
+	ros::Subscriber rtabOdom = nh.subscribe("/rtabmap/odom", 1000, &odom_callback);
+
+
+	scale_ = 1;
+       	/*ros::Subscriber pose_sub = nh.subscribe(input_topic, 1000, &pose_callback);
+
+
+	ros::Subscriber scale_sub =nh.subscribe("/lsd_slam/scale", 1000, &poseMessageReceived);
+	ros::Subscriber pressure_height_sub =nh.subscribe("/pressure_height", 1000, &pressure_height_callback);*/
+
+	ros::spin();
+	delete pListener;
+	return 0;
+    }

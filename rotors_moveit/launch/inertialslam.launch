@@ -1,0 +1,94 @@
+<launch>  
+
+  <arg name="frame_id"                default="/hummingbird/base_link" />
+  <arg name="rgb_topic"               default="/hummingbird/vi_sensor/camera_depth/camera/image_raw" />
+  <arg name="depth_topic"             default="/hummingbird/vi_sensor/camera_depth/depth/disparity" />
+  <arg name="camera_info_topic"       default="/hummingbird/vi_sensor/camera_depth/camera/camera_info" />
+  <arg name="imu_topic"               default="/hummingbird/vi_sensor/imu" />
+  <arg name="imu_ignore_acc"          default="false" />
+  <arg name="imu_remove_gravitational_acceleration" default="true" />
+
+  <!-- Localization-only mode -->
+  <arg name="localization"      default="false"/>
+  <arg     if="$(arg localization)" name="rtabmap_args"  default=""/>
+  <arg unless="$(arg localization)" name="rtabmap_args"  default="--delete_db_on_start"/>  
+  <group ns="rtabmap">
+    <!-- Visual Odometry -->
+    <node pkg="rtabmap_ros" type="rgbd_odometry" name="visual_odometry" output="screen" args="$(arg rtabmap_args)">
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/vo"/>
+
+      <param name="frame_id"               type="string" value="$(arg frame_id)"/>
+      <param name="publish_tf"             type="bool"   value="true"/>
+      <param name="publish_null_when_lost" type="bool"   value="false"/>
+      <param name="guess_from_tf"          type="bool"   value="true"/>
+
+      <param name="Odom/Strategy"      type="string" value="5"/>
+      <param name="approx_sync"      type="bool" value="false"/>
+      <param name="Odom/FillInfoData"      type="bool" value="true"/>
+      <param name="Odom/GuessMotion"      type="bool" value="false"/>
+      <param name="Odom/AlignWithGround"      type="bool" value="false"/>
+      <param name="Odom/ResetCountdown"    type="string" value="10"/>
+      <param name="Odom/BundleAdjustment"    type="bool" value="true"/>
+      <param name="Odom/BundleAdjustmentMaxFrames"    type="string" value="100"/>
+      <param name="Vis/FeatureType"        type="string" value="6"/>
+      <param name="Vis/EstimationType"        type="string" value="2"/>  
+      <param name="OdomF2M/MaxSize"        type="string" value="10000"/>
+      <param name="OdomORBSLAM2/VocPath"        type="string" value="/home/vkpankov/NonRos/ORB_SLAM2/Vocabulary/ORBvoc.txt"/>
+
+
+
+
+
+    </node>
+
+    <!-- SLAM -->
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="$(arg rtabmap_args)">
+      <param name="frame_id"        type="string" value="$(arg frame_id)"/>
+ 
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/vo"/>
+
+      <param name="Mem/RehearsalSimilarity" type="string" value="0.4"/>
+      <param name="Mem/STMSize" type="string" value="15"/>
+      <param name="Mem/BadSignaturesIgnored" type="bool" value="false"/>
+      <param name="ImageBufferSize" type="string" value="0"/> 
+      <param name="DetectionRate" type="string" value="0"/> 
+      <param name="RGBD/OptimizeMaxError" type="string" value="1"/>
+      <param name="RGBD/Enabled" type="bool" value="true"/>
+      <param name="Vis/FeatureType"        type="string" value="0"/>
+      <param name="Grid/GroundIsObstacle"        type="string" value="true"/>    
+      <param name="Grid/RayTracing"        type="string" value="true"/>   
+	  <!-- RTAB-Map's parameters: do "rosrun rtabmap rtabmap (double-dash)params" to see the list of available parameters. -->
+	  <param name="RGBD/PoseScanMatching" type="string" value="false"/>  <!-- Do odometry correction with consecutive laser scans -->
+	  <param name="RGBD/LocalLoopDetectionSpace" type="string" value="true"/>  <!-- Local loop closure detection (using estimated position) with locations in WM -->
+	  <param name="RGBD/LocalLoopDetectionTime" type="string" value="false"/>   <!-- Local loop closure detection with locations in STM -->
+      <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>    <!-- Optimize graph from initial node so /map -> /odom transform will be generated -->
+
+
+
+
+    </node>
+
+    <!-- Visualisation RTAB-Map !-->
+    <node pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="log">
+      <param name="subscribe_depth" type="bool" value="true"/>
+      <param name="subscribe_laserScan" type="bool" value="false"/>
+      <param name="frame_id" type="string" value="$(arg frame_id)"/>
+      <param name="wait_for_transform" type="bool" value="true"/>
+    
+      <remap from="rgb/image"       to="$(arg rgb_topic)"/>
+      <remap from="depth/image"     to="$(arg depth_topic)"/>
+      <remap from="rgb/camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="odom"            to="/vo"/>
+
+
+    </node> 
+
+  </group>
+
+</launch>
